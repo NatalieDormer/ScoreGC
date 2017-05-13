@@ -6,7 +6,7 @@
 
 typedef struct _GAME_INFO {
     int     gameNo;
-    bool    isMaleGame;
+    char    sex;
     int     rankCount;
     int     score[RANK_COUNT_MAX];
     int     playerRank[RANK_COUNT_MAX];
@@ -24,7 +24,7 @@ typedef struct _GAME_LIST {
 typedef struct _PLAYER_INFO {
     int     playerNo;
     int     gameNo;
-    bool    isMale;
+    char    sex;
     int     rank;
     int     score;
     int     schoolNo;
@@ -40,8 +40,8 @@ typedef struct _PLAYER_LIST {
 
 static GAME_LIST* GameListCreate(GAME_LIST* head);
 static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head);
-static bool ListCheckRep_GameNo(GAME_LIST* src, GAME_LIST* cur);
-static bool ListCheckRep_PlayerNo(PLAYER_LIST* src, PLAYER_LIST* cur);
+static GAME_LIST* FindGameNode(GAME_LIST* game, int gameNo);
+static PLAYER_LIST* FindPlayerNode(PLAYER_LIST* player, int playerNo);
 
 GAME_LIST* gameList = NULL;
 PLAYER_LIST* playerList = NULL;
@@ -63,7 +63,7 @@ static GAME_LIST* GameListCreate(GAME_LIST* head)
     scanf("%d", &count);
     head->maleGameCount = count;
     printf("Input Famale Game Total Count:");
-    scanf("%d",&count);
+    scanf("%d", &count);
     head->famaleGameCount = count;
     head->gameTotalCount = head->famaleGameCount + head->maleGameCount;
 
@@ -72,52 +72,34 @@ static GAME_LIST* GameListCreate(GAME_LIST* head)
     head->next = NULL;
     head->pre = NULL;
     int i = 0;
-    for(; i < head->maleGameCount; i++) {
+    for(; i < head->gameTotalCount; i++) {
         GAME_LIST* cur = (GAME_LIST*)malloc(sizeof(GAME_LIST));
         if(NULL == cur) {
             return cur;
         }
         memset(cur, 0x00, sizeof(GAME_LIST));
-        cur->info.isMaleGame = true;
 
-        printf("Input %dth Male GameNo:", i + 1);
+        /* game sex */
+        if(i >= 0 && i < head->maleGameCount) {
+            cur->info.sex = 'm';
+        }
+        else {
+            cur->info.sex = 'f';
+        }
+
+        /* game no */
+        printf("Input %dth %c GameNo:", i + 1, cur->info.sex);
         scanf("%d", &(cur->info.gameNo));
-        while(true == ListCheckRep_GameNo(head, cur)) {
-            printf("[Error! GameNo Exist, Please Input Another]:");
+        while(NULL != FindGameNode(head, cur->info.gameNo)) {
+            printf("[ERROR] GameNo Exist, Please Input Another:");
             scanf("%d", &(cur->info.gameNo));
         }
 
-        printf("Input %dth Male Record Count(3 or 5):", i + 1);
+        /* record count */
+        printf("Input %dth %c Game Record Count(3 or 5):", i + 1, cur->info.sex);
         scanf("%d",&(cur->info.rankCount));
         while(!(cur->info.rankCount == 3 || cur->info.rankCount == 5)) {
-            printf("[Error! Please Input 3 or 5]:");
-            scanf("%d",&(cur->info.rankCount));
-        }
-        p->next = cur;
-        cur->pre = p;
-        cur->next = NULL;
-        p = cur;
-    }
-
-    for(i = head->maleGameCount; i < head->gameTotalCount; i++) {
-        GAME_LIST* cur = (GAME_LIST*)malloc(sizeof(GAME_LIST));
-        if(NULL == cur) {
-            return cur;
-        }
-        memset(cur, 0x00, sizeof(GAME_LIST));
-        cur->info.isMaleGame = true;
-
-        printf("Input %dth Famale Game No:", i + 1 - head->maleGameCount);
-        scanf("%d", &(cur->info.gameNo));
-        while(true == ListCheckRep_GameNo(head, cur)) {
-            printf("[Error! GameNo. Exist, Please Input Another]:");
-            scanf("%d", &(cur->info.gameNo));
-        }
-
-        printf("Input %dth Famale Record Count(3 or 5):", i + 1 - head->maleGameCount);
-        scanf("%d",&(cur->info.rankCount));
-        while(!(cur->info.rankCount == 3 || cur->info.rankCount == 5)) {
-            printf("[Error! Please Input 3 or 5]:");
+            printf("[Error] Please Input (3 or 5):");
             scanf("%d",&(cur->info.rankCount));
         }
         p->next = cur;
@@ -140,7 +122,7 @@ static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head)
     printf("Input Player Count:");
     scanf("%d", &(head->playerTotalCount));
     while(head->playerTotalCount <= 0) {
-        printf("[Error! Please input another(>0)]:");
+        printf("[Error] Please input another(>0):");
         scanf("%d", &(head->playerTotalCount));
     }
 
@@ -153,34 +135,27 @@ static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head)
         }
         memset(cur, 0x00, sizeof(PLAYER_LIST));
 
+        /* player no */
         printf("Input Player No:");
         scanf("%d", &(cur->info.playerNo));
-        while(true == ListCheckRep_PlayerNo(head, cur)) {
-            printf("[Error! PlayerNo. Exist, Please Input Another PlayerNo]:");
+        while(NULL != FindPlayerNode(head, cur->info.playerNo)) {
+            printf("[Error]PlayerNo. Exist, Please Input Another PlayerNo:");
             scanf("%d", &(cur->info.playerNo));
         }
 
-        char sex;
+        /* player sex */
         printf("Input Player Sex(f,m):");
-        scanf("%c", &sex);
-        while(!('f' == sex || 'm' == sex)) {
-            printf("[Error! Please Input 'f' or 'm']:");
-            scanf("%c", &sex);
-        }
-        if('f' == sex) {
-            cur->info.isMale = false;
-        }
-        else if('m' == sex) {
-            cur->info.isMale = true;
-        }
-        else {
-            ;
+        scanf("%c", &(cur->info.sex));
+        while(!('f' == cur->info.sex || 'm' == cur->info.sex)) {
+            printf("[Error] Please Input 'f' or 'm':");
+            scanf("%c", &(cur->info.sex));
         }
 
+        /* player school */
         printf("Input Player School No:");
         scanf("%d", &(cur->info.schoolNo));
         while(cur->info.schoolNo < 0) {
-            printf("[Error! Please Input SchoolNo(>=0)]:");
+            printf("[Error] Please Input SchoolNo(>=0):");
             scanf("%d", &(cur->info.schoolNo));
         }
 
@@ -193,32 +168,58 @@ static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head)
     return head;
 }
 
-static bool ListCheckRep_GameNo(GAME_LIST* src, GAME_LIST* cur)
+static void* PlayerList_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
 {
-    bool ret = false;
-    GAME_LIST* p = src;
-    while(NULL != p) {
-        if(p->info.gameNo == cur->info.gameNo) {
-            ret = true;
-            break;
-        }
-        p = p->next;
+    if(NULL == game || NULL == player) {
+        return NULL;
     }
-    return ret;
+    //player
+    int i;
+    PLAYER_LIST* pp = player;
+    for(i = 0, pp = pp->next; i < player->playerTotalCount; i++) {
+        /* player's score */
+        printf("Input Player[%d]'s Score:", pp->info.playerNo);
+        scanf("%d", &(pp->info.score));
+        while(pp->info.score < 0) {
+            printf("[ERROR]Score < 0, Please Input Score >= 0:");
+            scanf("%d", &(pp->info.score));
+        }
+
+        /* player's gameNo */
+        printf("Input Player[%d]'s GameNo:", pp->info.playerNo);
+        scanf("%d", &(pp->info.gameNo));
+
+
+
+
+
+
+    }
 }
 
-static bool ListCheckRep_PlayerNo(PLAYER_LIST* src, PLAYER_LIST* cur)
+
+static GAME_LIST* FindGameNode(GAME_LIST* game, int gameNo)
 {
-    bool ret = false;
-    PLAYER_LIST* p = src;
-    while(NULL != p) {
-        if(p->info.playerNo == cur->info.playerNo) {
-            ret = true;
-            break;
+    GAME_LIST* p = game;
+    while(p != NULL) {
+        if(p->info.gameNo == gameNo) {
+            return p;
         }
         p = p->next;
     }
-    return ret;
+    return p;
+}
+
+static PLAYER_LIST* FindPlayerNode(PLAYER_LIST* player, int playerNo)
+{
+    PLAYER_LIST* p = player;
+    while(p != NULL) {
+        if(p->info.playerNo == playerNo) {
+            return p;
+        }
+        p = p->next;
+    }
+    return p;
 }
 
 
@@ -231,10 +232,9 @@ static bool ListCheckRep_PlayerNo(PLAYER_LIST* src, PLAYER_LIST* cur)
 
 int main(void)
 {
-    //printf("!!!!!!!");
     gameList = GameListCreate(gameList);
     playerList = PlayerListCreate(playerList);
-
+   // PlayerList_GameNo_Score(gameList, playerList);
 
     return 0;
 }
