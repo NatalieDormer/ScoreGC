@@ -42,6 +42,7 @@ static GAME_LIST* GameListCreate(GAME_LIST* head);
 static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head);
 static GAME_LIST* FindGameNode(GAME_LIST* game, int gameNo);
 static PLAYER_LIST* FindPlayerNode(PLAYER_LIST* player, int playerNo);
+static bool EnableJoinGame(PLAYER_LIST* player, GAME_LIST* game);
 
 GAME_LIST* gameList = NULL;
 PLAYER_LIST* playerList = NULL;
@@ -83,12 +84,12 @@ static GAME_LIST* GameListCreate(GAME_LIST* head)
         if(i >= 0 && i < head->maleGameCount) {
             cur->info.sex = 'm';
         }
-        else {
+        else if(i >= head->maleGameCount && i < head->gameTotalCount){
             cur->info.sex = 'f';
         }
 
         /* game no */
-        printf("Input %dth %c GameNo:", i + 1, cur->info.sex);
+        printf("Input %dth GameNo(%c):", i + 1, cur->info.sex);
         scanf("%d", &(cur->info.gameNo));
         while(NULL != FindGameNode(head, cur->info.gameNo)) {
             printf("[ERROR] GameNo Exist, Please Input Another:");
@@ -96,7 +97,7 @@ static GAME_LIST* GameListCreate(GAME_LIST* head)
         }
 
         /* record count */
-        printf("Input %dth %c Game Record Count(3 or 5):", i + 1, cur->info.sex);
+        printf("Input %dth  Game(%c) Record Count(3 or 5):", i + 1, cur->info.sex);
         scanf("%d",&(cur->info.rankCount));
         while(!(cur->info.rankCount == 3 || cur->info.rankCount == 5)) {
             printf("[Error] Please Input (3 or 5):");
@@ -168,15 +169,15 @@ static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head)
     return head;
 }
 
-static void* PlayerList_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
+static void* PlayerListInit_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
 {
     if(NULL == game || NULL == player) {
         return NULL;
     }
-    //player
+
     int i;
     PLAYER_LIST* pp = player;
-    for(i = 0, pp = pp->next; i < player->playerTotalCount; i++) {
+    for(i = 0, pp = pp->next; i < player->playerTotalCount; i++, pp = pp->next) {
         /* player's score */
         printf("Input Player[%d]'s Score:", pp->info.playerNo);
         scanf("%d", &(pp->info.score));
@@ -188,7 +189,10 @@ static void* PlayerList_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
         /* player's gameNo */
         printf("Input Player[%d]'s GameNo:", pp->info.playerNo);
         scanf("%d", &(pp->info.gameNo));
-
+        while(false == EnableJoinGame(pp, game)) {
+            printf("Input Player[%d]'s GameNo Again:",pp->info.playerNo);
+            scanf("%d", &(pp->info.gameNo));
+        }
 
 
 
@@ -197,6 +201,29 @@ static void* PlayerList_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
     }
 }
 
+
+static bool EnableJoinGame(PLAYER_LIST* player, GAME_LIST* game)
+{
+    bool enable = false;
+    if(NULL == player || NULL == game) {
+        return enable;
+    }
+
+    GAME_LIST* pgame = FindGameNode(game, player->info.gameNo);
+    if(NULL == pgame) {
+        printf("[ERROR]GameNo Not Exist,");
+    }
+    else {
+        if(pgame->info.sex == player->info.sex) {
+            enable = true;
+        }
+        else {
+            printf("[ERROR]Sex ERROR! GameNo=%d is Sex=%c Game Error,",pgame->info.gameNo, player->info.sex);
+        }
+    }
+
+    return enable;
+}
 
 static GAME_LIST* FindGameNode(GAME_LIST* game, int gameNo)
 {
@@ -234,7 +261,7 @@ int main(void)
 {
     gameList = GameListCreate(gameList);
     playerList = PlayerListCreate(playerList);
-   // PlayerList_GameNo_Score(gameList, playerList);
+    PlayerListInit_GameNo_Score(gameList, playerList);
 
     return 0;
 }
