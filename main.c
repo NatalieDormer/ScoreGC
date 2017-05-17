@@ -5,9 +5,9 @@
 #define RANK_COUNT_MAX (5)
 
 typedef struct _GAME_INFO {
-    int     gameNo;
-    char    sex;
-    int     rankCount;
+    int     gameNo;//
+    char    sex;//
+    int     rankCount;//
     int     score[RANK_COUNT_MAX];
     int     playerRank[RANK_COUNT_MAX];
 }GAME_INFO;
@@ -17,32 +17,36 @@ typedef struct _GAME_LIST {
     int     gameTotalCount;
     int     maleGameCount;
     int     famaleGameCount;
-    struct GAME_INFO* pre;
-    struct GAME_LIST* next;
+    struct _GAME_LIST* pre;
+    struct _GAME_LIST* next;
 }GAME_LIST;
 
 typedef struct _PLAYER_INFO {
-    int     playerNo;
-    int     gameNo;
-    char    sex;
+    int     playerNo;//
+    int     gameNo;//
+    char    sex;//
     int     rank;
-    int     score;
-    int     schoolNo;
+    int     score;//
+    int     schoolNo;//
 }PLAYER_INFO;
 
 typedef struct _PLAYER_LIST {
     PLAYER_INFO info;
     int     playerTotalCount;
-    struct PLAYER_INFO* pre;
-    struct PLAYER_INFO* next;
+    struct _PLAYER_LIST* pre;
+    struct _PLAYER_LIST* next;
 }PLAYER_LIST;
 
 
 static GAME_LIST* GameListCreate(GAME_LIST* head);
 static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head);
+static PLAYER_LIST* PlayerListInit_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player);
+static GAME_LIST* GameListInit_Score_Rank(GAME_LIST* game, PLAYER_LIST* player);
+
 static GAME_LIST* FindGameNode(GAME_LIST* game, int gameNo);
 static PLAYER_LIST* FindPlayerNode(PLAYER_LIST* player, int playerNo);
 static bool EnableJoinGame(PLAYER_LIST* player, GAME_LIST* game);
+static PLAYER_LIST* DeleteNode_BaseOnGameNo(int no, PLAYER_LIST* list);
 
 GAME_LIST* gameList = NULL;
 PLAYER_LIST* playerList = NULL;
@@ -78,7 +82,7 @@ static GAME_LIST* GameListCreate(GAME_LIST* head)
         if(NULL == cur) {
             return cur;
         }
-        memset(cur, 0x00, sizeof(GAME_LIST));
+        memset(cur, 0, sizeof(GAME_LIST));
 
         /* game sex */
         if(i >= 0 && i < head->maleGameCount) {
@@ -169,7 +173,7 @@ static PLAYER_LIST* PlayerListCreate(PLAYER_LIST* head)
     return head;
 }
 
-static void* PlayerListInit_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
+static PLAYER_LIST* PlayerListInit_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
 {
     if(NULL == game || NULL == player) {
         return NULL;
@@ -193,12 +197,56 @@ static void* PlayerListInit_GameNo_Score(GAME_LIST* game, PLAYER_LIST* player)
             printf("Input Player[%d]'s GameNo Again:",pp->info.playerNo);
             scanf("%d", &(pp->info.gameNo));
         }
-
-
-
-
-
     }
+    return player;
+}
+
+
+static GAME_LIST* GameListInit_Score_Rank(GAME_LIST* game, PLAYER_LIST* player)
+{
+    if(game == NULL || player == NULL) {
+        return NULL;
+    }
+
+    //get playerlist who play this game
+    GAME_LIST* pg;
+    for(pg = game->next; pg != NULL; pg = pg->next) {
+        PLAYER_LIST* tempPlayerList = (PLAYER_LIST*)malloc(sizeof(PLAYER_LIST) * (player->playerTotalCount + 1));// +1,because first node is head
+        if(NULL == tempPlayerList) {
+            return NULL;
+        }
+        memcpy(tempPlayerList, player, sizeof(PLAYER_LIST) * (player->playerTotalCount + 1));
+        tempPlayerList = DeleteNode_BaseOnGameNo(pg->info.gameNo, tempPlayerList);
+        if(tempPlayerList == NULL) {
+            continue;
+        }
+        int i;
+        PLAYER_LIST* pp;
+        for(i = 0, pp = tempPlayerList->next; i < pg->info.rankCount, pp != NULL; i++, pp = pp->next) {
+            pg->info.playerRank[i] = pp->info.playerNo;
+            pg->info.score[i] = pp->info.score;
+            printf("%d:playerNo=%d,score=%d",i,pg->info.playerRank[i],pg->info.score[i]);
+        }
+        free(tempPlayerList);
+    }
+    return game;
+}
+
+static PLAYER_LIST* DeleteNode_BaseOnGameNo(int no, PLAYER_LIST* list)
+{
+    if(NULL == list) {
+        return list;
+    }
+    PLAYER_LIST* p = list;
+    while(NULL != p->next) {
+        if(p->next->info.gameNo != no) {
+            PLAYER_LIST* temp = p->next;
+            p->next = p->next->next;
+            free(temp);
+        }
+        p = p->next;
+    }
+    return list;
 }
 
 
@@ -261,7 +309,8 @@ int main(void)
 {
     gameList = GameListCreate(gameList);
     playerList = PlayerListCreate(playerList);
-    PlayerListInit_GameNo_Score(gameList, playerList);
+    playerList = PlayerListInit_GameNo_Score(gameList, playerList);
+    gameList = GameListInit_Score_Rank(gameList, playerList);
 
     return 0;
 }
